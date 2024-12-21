@@ -167,26 +167,29 @@ void Directorio(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos) {
     printf("%-20s\t%-10s\t%-10s\t%-40s\n", "Nombre", "Tamanio", "Inodo", "Bloques");
     for (i = 0; i < MAX_FICHEROS; i++) {
         if (directorio[i].dir_inodo != NULL_INODO) {
-            int inodo_idx = directorio[i].dir_inodo;
-            int size_fichero = inodos->blq_inodos[inodo_idx].size_fichero;
+            // Verificar que el inodo no sea el del directorio raíz
+            if (directorio[i].dir_inodo != NULL_INODO && strcmp(directorio[i].dir_nfich, ".") != 0) {
+                int inodo_idx = directorio[i].dir_inodo;
+                int size_fichero = inodos->blq_inodos[inodo_idx].size_fichero;
 
-            // Imprimir nombre, tamaño y número de inodo
-            printf("%-20s\t%-10d\t%-10d\t", directorio[i].dir_nfich, size_fichero, inodo_idx);
+                // Imprimir nombre, tamaño y número de inodo
+                printf("%-20s\t%-10d\t%-10d\t", directorio[i].dir_nfich, size_fichero, inodo_idx);
 
-            // Imprimir solo los bloques ocupados (no imprimir 65535)
-            int first_block = 1;  // Flag para controlar la separación de bloques
-            for (j = 0; j < MAX_NUMS_BLOQUE_INODO && inodos->blq_inodos[inodo_idx].i_nbloque[j] != 0; j++) {
-                int block = inodos->blq_inodos[inodo_idx].i_nbloque[j];
-                if (block != 65535) {  // Ignorar bloques 65535
-                    if (!first_block) {
-                        printf(", ");  // Separador entre bloques
+                // Imprimir solo los bloques ocupados (no imprimir 65535)
+                int first_block = 1;  // Flag para controlar la separación de bloques
+                for (j = 0; j < MAX_NUMS_BLOQUE_INODO && inodos->blq_inodos[inodo_idx].i_nbloque[j] != 0; j++) {
+                    int block = inodos->blq_inodos[inodo_idx].i_nbloque[j];
+                    if (block != 65535) {  // Ignorar bloques 65535
+                        if (!first_block) {
+                            printf(", ");  // Separador entre bloques
+                        }
+                        printf("%d", block);
+                        first_block = 0;  // Cambiar flag para la primera iteración
                     }
-                    printf("%d", block);
-                    first_block = 0;  // Cambiar flag para la primera iteración
                 }
-            }
 
-            printf("\n");
+                printf("\n");
+            }
         }
     }
 }
