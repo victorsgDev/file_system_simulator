@@ -78,13 +78,20 @@ int main() {
             Directorio(*&directorio, &ext_blq_inodos);
             continue;
         }
-        if (strcmp(orden, "info") == 0) {
+        else if (strcmp(orden, "info") == 0) {
             LeeSuperBloque(&ext_superblock);
-            continue;
         }
-        if (strcmp(orden, "bytemaps") == 0) {
+        else if (strcmp(orden, "bytemaps") == 0) {
             Printbytemaps(&ext_bytemaps);
-            continue;
+        }
+        else if (strcmp(orden, "salir") == 0) {
+            GrabarDatos(*&memdatos, fent);
+            fclose(fent);
+            return 0;
+        }
+        else {
+            // Si el comando no es reconocido, mostrar mensaje de error
+            printf("Comando desconocido: %s\n", orden);
         }
         /* Escritura de metadatos en comandos rename, remove, copy
         Grabarinodosydirectorio(*&directorio, &ext_blq_inodos, fent);
