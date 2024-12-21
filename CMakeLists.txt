@@ -7,4 +7,5 @@ include_directories(.)
 
 add_executable(file_system_simulator
         src/cabeceras.h
-        src/simul_ext_esqueleto.c)
+        src/simul_ext_esqueleto.c
+)
