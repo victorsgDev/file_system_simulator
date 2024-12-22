@@ -89,6 +89,9 @@ int main() {
             fclose(fent);
             return 0;
         }
+        else if (strcmp(orden, "rename") == 0) {
+            Renombrar(*&directorio, &ext_blq_inodos, argumento1, argumento2);
+        }
         else {
             // Si el comando no es reconocido, mostrar mensaje de error
             printf("Comando desconocido: %s\n", orden);
@@ -213,4 +216,45 @@ void Printbytemaps(EXT_BYTE_MAPS *ext_bytemaps) {
         }
     }
     printf("\n");
+}
+
+int Renombrar(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos,
+              char *nombreantiguo, char *nombrenuevo) {
+    int inodo_idx = BuscaFich(directorio, inodos, nombreantiguo);  // Buscar el fichero original
+
+    // Comprobar si el fichero origen existe
+    if (inodo_idx == -1) {
+        printf("Error: El fichero '%s' no encontrado.\n", nombreantiguo);
+        return -1;  // Fichero no encontrado
+    }
+
+    // Comprobar si el nuevo nombre ya está en uso
+    for (int i = 0; i < MAX_FICHEROS; i++) {
+        if (strcmp(directorio[i].dir_nfich, nombrenuevo) == 0) {
+            printf("Error: El fichero '%s' ya existe.\n", nombrenuevo);
+            return -2;  // El nuevo nombre ya está en uso
+        }
+    }
+
+    // Si no está en uso, renombramos el fichero
+    for (int i = 0; i < MAX_FICHEROS; i++) {
+        if (directorio[i].dir_inodo == inodo_idx) {
+            // Cambiar el nombre
+            strcpy(directorio[i].dir_nfich, nombrenuevo);
+            printf("Fichero '%s' renombrado a '%s'.\n", nombreantiguo, nombrenuevo);
+            return 0;  // Éxito
+        }
+    }
+
+    return -3;  // No se encontró la entrada en el directorio (esto no debería ocurrir)
+}
+
+int BuscaFich(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos,
+              char *nombre) {
+    for (int i = 0; i < MAX_FICHEROS; i++) {
+        if (strcmp(directorio[i].dir_nfich, nombre) == 0) {
+            return directorio[i].dir_inodo;  // Devolver el índice del inodo
+        }
+    }
+    return -1;  // No se encontró el fichero
 }
