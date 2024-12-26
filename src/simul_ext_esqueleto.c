@@ -38,6 +38,8 @@ void GrabarSuperBloque(EXT_SIMPLE_SUPERBLOCK *ext_superblock, FILE *fich);
 
 void GrabarDatos(EXT_DATOS *memdatos, FILE *fich);
 
+void Ayuda();
+
 int main() {
     char comando[LONGITUD_COMANDO];
     char orden[LONGITUD_COMANDO];
@@ -67,7 +69,8 @@ int main() {
     memcpy(&ext_blq_inodos, (EXT_BLQ_INODOS *) &datosfich[2], SIZE_BLOQUE);
     memcpy(&memdatos, (EXT_DATOS *) &datosfich[4], MAX_BLOQUES_DATOS * SIZE_BLOQUE);
 
-    // Buce de tratamiento de comandos
+    printf("Bienvenido al sistema de ficheros, prueba a ejecutar help para ver los comandos disponibles.\n");
+    // Bucle de tratamiento de comandos
     for (;;) {
         do {
             printf(">> ");
@@ -80,9 +83,11 @@ int main() {
         }
         else if (strcmp(orden, "info") == 0) {
             LeeSuperBloque(&ext_superblock);
+            continue;
         }
         else if (strcmp(orden, "bytemaps") == 0) {
             Printbytemaps(&ext_bytemaps);
+            continue;
         }
         else if (strcmp(orden, "salir") == 0) {
             GrabarDatos(*&memdatos, fent);
@@ -95,6 +100,12 @@ int main() {
         else if (strcmp(orden, "imprimir") == 0) {
             Imprimir(*&directorio, &ext_blq_inodos, *&memdatos, argumento1);
         }
+        else if (strcmp(orden, "remove") == 0) {
+            Borrar(*&directorio, &ext_blq_inodos, &ext_bytemaps, &ext_superblock, argumento1, fent);
+        }
+        else if (strcmp(orden, "help") == 0){
+            Ayuda();
+        }
         else {
             // Si el comando no es reconocido, mostrar mensaje de error
             printf("Comando desconocido: %s\n", orden);
@@ -106,6 +117,7 @@ int main() {
         if (grabardatos)
             GrabarDatos(*&memdatos, fent);
         grabardatos = 0;
+
         //Si el comando es salir se habrán escrito todos los metadatos
         //faltan los datos y cerrar
         if (strcmp(orden, "salir") == 0) {
@@ -310,4 +322,74 @@ int Imprimir(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos, EXT_DATOS *mem
 
     printf("\n");
     return 0;  // Éxito
+}
+
+int Borrar(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos,EXT_BYTE_MAPS *ext_bytemaps, EXT_SIMPLE_SUPERBLOCK *ext_superblock,
+           char *nombre, FILE *fich) {
+    // Buscar el fichero en el directorio
+    int inodo_idx = BuscaFich(directorio, inodos, nombre);
+
+    // Si el fichero no existe, imprimir error y salir
+    if (inodo_idx == -1) {
+        printf("Error: El fichero '%s' no existe.\n", nombre);
+        return -1;
+    }
+
+    // Buscar la posición en el directorio
+    int dir_idx = -1;
+    for (int i = 0; i < MAX_FICHEROS; i++) {
+        if (directorio[i].dir_inodo == inodo_idx) {
+            dir_idx = i;
+            break;
+        }
+    }
+
+    if (dir_idx == -1) {
+        fprintf(fich, "Error interno: No se pudo localizar el fichero '%s' en el directorio.\n", nombre);
+        return -1;
+    }
+
+    // Eliminar entrada del directorio
+    strcpy(directorio[dir_idx].dir_nfich, "");  // Nombre vacío
+    directorio[dir_idx].dir_inodo = NULL_INODO; // Inodo inválido
+
+    // Acceder al inodo correspondiente
+    EXT_SIMPLE_INODE *inodo = &inodos->blq_inodos[inodo_idx];
+
+    // Liberar bloques ocupados por el fichero
+    for (int j = 0; j < MAX_NUMS_BLOQUE_INODO; j++) {
+        int bloque = inodo->i_nbloque[j];
+        if (bloque != NULL_BLOQUE) {
+            ext_bytemaps->bmap_bloques[bloque] = 0; // Liberar bloque en bytemap
+            inodo->i_nbloque[j] = NULL_BLOQUE;     // Marcar bloque como inválido
+            ext_superblock->s_free_blocks_count++; // Incrementar bloques libres
+        }
+    }
+
+    // Liberar el inodo en el bytemap de inodos
+    ext_bytemaps->bmap_inodos[inodo_idx] = 0; // Liberar inodo en bytemap
+    ext_superblock->s_free_inodes_count++;    // Incrementar inodos libres
+
+    // Limpiar el inodo
+    inodo->size_fichero = 0;
+    for (int j = 0; j < MAX_NUMS_BLOQUE_INODO; j++) {
+        inodo->i_nbloque[j] = NULL_BLOQUE;
+    }
+
+    // Imprimir mensaje de confirmación
+    printf("El fichero '%s' ha sido eliminado correctamente.\n", nombre);
+
+    return 0; // Éxito
+}
+
+void Ayuda(){
+    printf("Los comandos disponibles son:\n");
+    printf("\tdir --> Muestra el contenido del directorio.\n");
+    printf("\tinfo --> Muestra información sobre el sistema de ficheros.\n");
+    printf("\tbytemaps --> Muestra el contenido de los bytemaps (i-nodos y bloques).\n");
+    printf("\trename <nombre_actual> <nuevo_nombre> --> Cambia el nombre de un fichero.\n");
+    printf("\timprimir <nombre_fichero> --> Muestra el contenido de un fichero.\n");
+    printf("\tremove <nombre_fichero> --> Elimina un fichero.\n");
+    printf("\tcopy <nombre_origen> <nombre_destino> --> Copia el contenido de un fichero a otro.\n");
+    printf("\tsalir --> Cierra el programa.\n");
 }
