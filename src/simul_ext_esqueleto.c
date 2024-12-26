@@ -92,6 +92,9 @@ int main() {
         else if (strcmp(orden, "rename") == 0) {
             Renombrar(*&directorio, &ext_blq_inodos, argumento1, argumento2);
         }
+        else if (strcmp(orden, "imprimir") == 0) {
+            Imprimir(*&directorio, &ext_blq_inodos, *&memdatos, argumento1);
+        }
         else {
             // Si el comando no es reconocido, mostrar mensaje de error
             printf("Comando desconocido: %s\n", orden);
@@ -272,4 +275,39 @@ void GrabarByteMaps(EXT_BYTE_MAPS *ext_bytemaps, FILE *fich) {
 void GrabarSuperBloque(EXT_SIMPLE_SUPERBLOCK *ext_superblock, FILE *fich) {
     fseek(fich, 0, SEEK_SET);
     fwrite(ext_superblock, SIZE_BLOQUE, 1, fich);
+}
+
+int Imprimir(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos, EXT_DATOS *memdatos, char *nombre) {
+
+    if (nombre == NULL || strlen(nombre) == 0) {
+        printf("Error: No se ha especificado un nombre de fichero.\n");
+        return -1;  // No se especificó un nombre de fichero
+    }
+
+    // Buscar el inodo correspondiente al fichero
+    int inodo_idx = BuscaFich(directorio, inodos, nombre);
+
+    // Comprobar si el fichero existe
+    if (inodo_idx == -1) {
+        printf("Error: El fichero '%s' no existe.\n", nombre);
+        return -1;  // Fichero no encontrado
+    }
+
+    // Obtener el inodo correspondiente al fichero
+    EXT_SIMPLE_INODE inodo = inodos->blq_inodos[inodo_idx];
+
+    // Imprimir el contenido de los bloques
+    printf("Contenido de '%s':\n", nombre);
+
+    for (int i = 0; i < MAX_NUMS_BLOQUE_INODO && inodo.i_nbloque[i] != 0; i++) {
+        int bloque = inodo.i_nbloque[i];
+
+        if (bloque != NULL_BLOQUE) {  // Ignorar bloques no válidos
+            // Imprimir los datos del bloque
+            printf("%s", memdatos[bloque].dato);
+        }
+    }
+
+    printf("\n");
+    return 0;  // Éxito
 }
