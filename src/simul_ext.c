@@ -468,7 +468,7 @@ int Copiar(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos,
 void Ayuda(){
     printf("Los comandos disponibles son:\n");
     printf("\tdir --> Muestra el contenido del directorio.\n");
-    printf("\tinfo --> Muestra información sobre el sistema de ficheros.\n");
+    printf("\tinfo --> Muestra informacion sobre el sistema de ficheros.\n");
     printf("\tbytemaps --> Muestra el contenido de los bytemaps (i-nodos y bloques).\n");
     printf("\trename <nombre_actual> <nuevo_nombre> --> Cambia el nombre de un fichero.\n");
     printf("\timprimir <nombre_fichero> --> Muestra el contenido de un fichero.\n");
