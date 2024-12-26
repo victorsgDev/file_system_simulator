@@ -171,7 +171,7 @@ void LeeSuperBloque(EXT_SIMPLE_SUPERBLOCK *superblock) {
     printf("Primer bloque de datos: %d\n", superblock->s_first_data_block);
     printf("Bloques libres: %d\n", superblock->s_free_blocks_count);
     printf("Inodos libres: %d\n", superblock->s_free_inodes_count);
-    printf("Tamanio del bloque: %d\n", superblock->s_block_size);
+    printf("Tamanio del bloque (bytes): %d\n", superblock->s_block_size);
 }
 
 void GrabarDatos(EXT_DATOS *memdatos, FILE *fich) {
