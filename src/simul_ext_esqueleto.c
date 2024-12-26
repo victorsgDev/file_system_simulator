@@ -89,26 +89,34 @@ int main() {
             Printbytemaps(&ext_bytemaps);
             continue;
         }
-        else if (strcmp(orden, "salir") == 0) {
-            GrabarDatos(*&memdatos, fent);
-            fclose(fent);
-            return 0;
-        }
         else if (strcmp(orden, "rename") == 0) {
             Renombrar(*&directorio, &ext_blq_inodos, argumento1, argumento2);
         }
         else if (strcmp(orden, "imprimir") == 0) {
             Imprimir(*&directorio, &ext_blq_inodos, *&memdatos, argumento1);
+            continue; // No necesiatmos grabar nada en el fichero
         }
         else if (strcmp(orden, "remove") == 0) {
             Borrar(*&directorio, &ext_blq_inodos, &ext_bytemaps, &ext_superblock, argumento1, fent);
         }
+        else if (strcmp(orden, "copy") == 0) {
+            Copiar(*&directorio, &ext_blq_inodos, &ext_bytemaps, &ext_superblock, *&memdatos, argumento1, argumento2, fent);
+        }
         else if (strcmp(orden, "help") == 0){
             Ayuda();
+            continue;
+        }
+        //Si el comando es salir se habrán escrito todos los metadatos
+        //faltan los datos y cerrar
+        else if (strcmp(orden, "salir") == 0) {
+            GrabarDatos(*&memdatos, fent);
+            fclose(fent);
+            return 0;
         }
         else {
             // Si el comando no es reconocido, mostrar mensaje de error
             printf("Comando desconocido: %s\n", orden);
+            continue;
         }
         // Escritura de metadatos en comandos rename, remove, copy
         Grabarinodosydirectorio(*&directorio, &ext_blq_inodos, fent);
@@ -117,14 +125,6 @@ int main() {
         if (grabardatos)
             GrabarDatos(*&memdatos, fent);
         grabardatos = 0;
-
-        //Si el comando es salir se habrán escrito todos los metadatos
-        //faltan los datos y cerrar
-        if (strcmp(orden, "salir") == 0) {
-            GrabarDatos(*&memdatos, fent);
-            fclose(fent);
-            return 0;
-        }
     }
 }
 
@@ -380,6 +380,83 @@ int Borrar(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos,EXT_BYTE_MAPS *ex
     printf("El fichero '%s' ha sido eliminado correctamente.\n", nombre);
 
     return 0; // Éxito
+}
+
+int Copiar(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos,
+           EXT_BYTE_MAPS *ext_bytemaps, EXT_SIMPLE_SUPERBLOCK *ext_superblock,
+           EXT_DATOS *memdatos, char *nombreorigen, char *nombredestino, FILE *fich) {
+    // Buscar el fichero origen
+    int inodo_origen = BuscaFich(directorio, inodos, nombreorigen);
+    if (inodo_origen == -1) {
+        printf("Error: El fichero origen '%s' no existe.\n", nombreorigen);
+        return -1; // Fichero origen no encontrado
+    }
+
+    // Verificar si el nombre del fichero destino ya existe
+    if (BuscaFich(directorio, inodos, nombredestino) != -1) {
+        printf("Error: El fichero destino '%s' ya existe.\n", nombredestino);
+        return -1; // Fichero destino ya existe
+    }
+
+    // Buscar el primer inodo libre
+    int inodo_destino = -1;
+    for (int i = 0; i < MAX_INODOS; i++) {
+        if (ext_bytemaps->bmap_inodos[i] == 0) {
+            inodo_destino = i;
+            ext_bytemaps->bmap_inodos[i] = 1; // Marcar inodo como ocupado
+            break;
+        }
+    }
+    if (inodo_destino == -1) {
+        printf("Error: No hay inodos libres.\n");
+        return -1; // No hay inodos disponibles
+    }
+
+    // Copiar el tamaño del fichero y marcar el inodo como ocupado
+    inodos->blq_inodos[inodo_destino].size_fichero = inodos->blq_inodos[inodo_origen].size_fichero;
+
+    // Copiar bloques del fichero origen al fichero destino
+    for (int i = 0; i < MAX_NUMS_BLOQUE_INODO; i++) {
+        if (inodos->blq_inodos[inodo_origen].i_nbloque[i] == 0 ||
+            inodos->blq_inodos[inodo_origen].i_nbloque[i] == 65535) {
+            break; // Fin de los bloques ocupados
+        }
+
+        int bloque_origen = inodos->blq_inodos[inodo_origen].i_nbloque[i];
+
+        // Buscar el primer bloque libre
+        int bloque_destino = -1;
+        for (int j = 0; j < MAX_BLOQUES_PARTICION; j++) {
+            if (ext_bytemaps->bmap_bloques[j] == 0) {
+                bloque_destino = j;
+                ext_bytemaps->bmap_bloques[j] = 1; // Marcar bloque como ocupado
+                break;
+            }
+        }
+        if (bloque_destino == -1) {
+            printf("Error: No hay bloques libres.\n");
+            return -1; // No hay bloques disponibles
+        }
+
+        // Copiar datos del bloque origen al bloque destino
+        memcpy(&memdatos[bloque_destino], &memdatos[bloque_origen], SIZE_BLOQUE);
+
+        // Asignar el bloque destino al inodo destino
+        inodos->blq_inodos[inodo_destino].i_nbloque[i] = bloque_destino;
+    }
+
+    // Agregar entrada en el directorio
+    for (int i = 0; i < MAX_FICHEROS; i++) {
+        if (directorio[i].dir_inodo == NULL_INODO) { // Entrada vacía
+            directorio[i].dir_inodo = inodo_destino;
+            strcpy(directorio[i].dir_nfich, nombredestino);
+            printf("Fichero '%s' copiado a '%s'.\n", nombreorigen, nombredestino);
+            return 0; // Éxito
+        }
+    }
+
+    printf("Error: No hay espacio en el directorio para el fichero destino.\n");
+    return -1; // No hay espacio en el directorio
 }
 
 void Ayuda(){
