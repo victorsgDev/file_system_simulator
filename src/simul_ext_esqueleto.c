@@ -96,13 +96,13 @@ int main() {
             // Si el comando no es reconocido, mostrar mensaje de error
             printf("Comando desconocido: %s\n", orden);
         }
-        /* Escritura de metadatos en comandos rename, remove, copy
+        // Escritura de metadatos en comandos rename, remove, copy
         Grabarinodosydirectorio(*&directorio, &ext_blq_inodos, fent);
         GrabarByteMaps(&ext_bytemaps, fent);
         GrabarSuperBloque(&ext_superblock, fent);
         if (grabardatos)
             GrabarDatos(*&memdatos, fent);
-        grabardatos = 0;*/
+        grabardatos = 0;
         //Si el comando es salir se habrán escrito todos los metadatos
         //faltan los datos y cerrar
         if (strcmp(orden, "salir") == 0) {
@@ -218,8 +218,7 @@ void Printbytemaps(EXT_BYTE_MAPS *ext_bytemaps) {
     printf("\n");
 }
 
-int Renombrar(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos,
-              char *nombreantiguo, char *nombrenuevo) {
+int Renombrar(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos, char *nombreantiguo, char *nombrenuevo) {
     int inodo_idx = BuscaFich(directorio, inodos, nombreantiguo);  // Buscar el fichero original
 
     // Comprobar si el fichero origen existe
@@ -249,12 +248,28 @@ int Renombrar(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos,
     return -3;  // No se encontró la entrada en el directorio (esto no debería ocurrir)
 }
 
-int BuscaFich(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos,
-              char *nombre) {
+int BuscaFich(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos, char *nombre) {
     for (int i = 0; i < MAX_FICHEROS; i++) {
         if (strcmp(directorio[i].dir_nfich, nombre) == 0) {
             return directorio[i].dir_inodo;  // Devolver el índice del inodo
         }
     }
     return -1;  // No se encontró el fichero
+}
+
+void Grabarinodosydirectorio(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos, FILE *fich) {
+    fseek(fich, SIZE_BLOQUE, SEEK_SET);
+    fwrite(inodos, SIZE_BLOQUE, 1, fich);
+    fseek(fich, SIZE_BLOQUE * 3, SEEK_SET);
+    fwrite(directorio, SIZE_BLOQUE, 1, fich);
+}
+
+void GrabarByteMaps(EXT_BYTE_MAPS *ext_bytemaps, FILE *fich) {
+    fseek(fich, SIZE_BLOQUE, SEEK_SET);
+    fwrite(ext_bytemaps, SIZE_BLOQUE, 1, fich);
+}
+
+void GrabarSuperBloque(EXT_SIMPLE_SUPERBLOCK *ext_superblock, FILE *fich) {
+    fseek(fich, 0, SEEK_SET);
+    fwrite(ext_superblock, SIZE_BLOQUE, 1, fich);
 }
