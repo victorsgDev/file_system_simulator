@@ -234,6 +234,12 @@ void Printbytemaps(EXT_BYTE_MAPS *ext_bytemaps) {
 }
 
 int Renombrar(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos, char *nombreantiguo, char *nombrenuevo) {
+
+    if(nombreantiguo == NULL || nombrenuevo == NULL || strlen(nombreantiguo) == 0 || strlen(nombrenuevo) == 0){
+        printf("Error: No se ha especificado un nombre de fichero.\n");
+        return -1;  // No se especificó un nombre de fichero
+    }
+
     int inodo_idx = BuscaFich(directorio, inodos, nombreantiguo);  // Buscar el fichero original
 
     // Comprobar si el fichero origen existe
